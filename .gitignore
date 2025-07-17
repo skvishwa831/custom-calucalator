@@ -1,0 +1,30 @@
+/DJango/env/*
+/angular/*
+
+*.py[cod]        # Compiled Python files
+__pycache__/     # Catch .pyc cache folders
+
+db.sqlite3       # Default local SQLite database (useful for dev, but not for version control)
+
+*.log            # Log files
+*.bak            # Backup files
+
+# VS Code
+.vscode/
+# PyCharm / IntelliJ
+.idea/
+# MacOS
+.DS_Store
+# Jupyter
+.ipynb_checkpoints/
+
+htmlcov/
+.coverage
+.coverage.*
+.cache/
+.pytest_cache/
+
+*.pyc
+
+*.sqlite3
+*.log
