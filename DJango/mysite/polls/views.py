@@ -34,16 +34,25 @@ class CalculateView(View):
         right_data = []
         left_data = []
         for s in test_strings:
-            n1, n2 = self.read_two_number_groups(s)
-            if n1 is not None and n2 is not None:
-                right_data.append(n1)
-                left_data.append(n2)
+            print("self.extract_ints(s)", self.extract_ints(s))
+            l = self.extract_ints(s)
+            for i in l[:-1]:
+                right_data.append(i)
+                left_data.append(l[-1])
         if save:
             for i in range(len(right_data)):
                 self.saveRecord(phoneNumber, phoneNumber, right_data[i], left_data[i])
         data = {"value": sum(left_data)}
-        logger.info(f"\n{'-'*50}\nrequest:{json_obj}\nresponse:{data}\nSaved:{save}\n{'-'*50}")
+        logger.info(
+            f"\n{'-'*50}\nrequest:{json_obj}\nresponse:{data}\nSaved:{save}\n{'-'*50}"
+        )
         return JsonResponse(data)
+
+    def extract_ints(self, s: str) -> list[int]:
+        """
+        Extract all positive integer values from the string.
+        """
+        return [int(x) for x in re.findall(r"\b\d+\b", s)]
 
     def read_two_number_groups(self, input_string):
         pattern = r"(\d+)\D*(\d+)"
