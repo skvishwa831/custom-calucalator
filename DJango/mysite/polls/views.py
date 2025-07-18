@@ -54,10 +54,17 @@ class CalculateView(View):
         return JsonResponse(data)
 
     def extract_ints(self, s: str) -> list[int]:
-        """
-        Extract all positive integer values from the string.
-        """
-        return [int(x) for x in re.findall(r"\b\d+\b", s)]
+        nums = []
+        current = ""
+        for ch in s:
+            if ch.isdigit():
+                current += ch
+            elif current:
+                nums.append(int(current))
+                current = ""
+        if current:
+            nums.append(int(current))
+        return nums
 
     def read_two_number_groups(self, input_string):
         pattern = r"(\d+)\D*(\d+)"
