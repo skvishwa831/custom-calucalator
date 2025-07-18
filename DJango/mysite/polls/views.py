@@ -33,12 +33,17 @@ class CalculateView(View):
         test_strings = message.splitlines()
         right_data = []
         left_data = []
+        last_Rembered = 0
         for s in test_strings:
-            print("self.extract_ints(s)", self.extract_ints(s))
             l = self.extract_ints(s)
-            for i in l[:-1]:
-                right_data.append(i)
-                left_data.append(l[-1])
+            if(len(l) > 1):
+                last_Rembered = l[-1]
+                for i in l[:-1]:
+                    right_data.append(i)
+                    left_data.append(l[-1])
+            if(len(l) == 1):
+                right_data.append(l[0])
+                left_data.append(last_Rembered)
         if save:
             for i in range(len(right_data)):
                 self.saveRecord(phoneNumber, phoneNumber, right_data[i], left_data[i])
