@@ -48,6 +48,7 @@ class CalculateView(View):
                 ):
                     list_data = s.split("]")
                     last_remembered_name = list_data[1].split(":")[0].strip()
+                    data = list_data[1].split(":")
                     list_data = s.split("[")
                     list_data = list_data[1].split(",")
                     time = list_data[1].split("]")[0].strip()
@@ -56,7 +57,11 @@ class CalculateView(View):
                     last_remembered_datetime = datetime.strptime(
                         combined, "%d/%m %I:%M %p"
                     ).replace(year=2025)
-                    continue
+                    if(data[1]):
+                        print('data found', data[1])
+                        s = data[1]
+                    else:
+                        continue
                 l = self.extract_ints(s)
                 right_single_data = 0
                 left_single_data = 0
