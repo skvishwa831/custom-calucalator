@@ -1,3 +1,4 @@
+from datetime import datetime
 import os
 import re
 from django.shortcuts import render
@@ -12,6 +13,7 @@ from django.http import JsonResponse
 import json
 from polls.models import Contact
 from polls.serializers import ContactSerializer
+from django.utils import timezone
 
 import logging
 
@@ -25,33 +27,69 @@ def index(request):
 class CalculateView(View):
     @csrf_exempt
     def post(self, request, *args, **kwargs):
-        decoded_str = request.body.decode("utf-8")
-        json_obj = json.loads(decoded_str)
-        message = json_obj.get("message", "")
-        save = json_obj.get("save", False)
-        phoneNumber = json_obj.get("phoneNumber", 0000000000)
-        test_strings = message.splitlines()
-        right_data = []
-        left_data = []
-        last_Rembered = 0
-        for s in test_strings:
-            l = self.extract_ints(s)
-            if(len(l) > 1):
-                last_Rembered = l[-1]
-                for i in l[:-1]:
-                    right_data.append(i)
-                    left_data.append(l[-1])
-            if(len(l) == 1):
-                right_data.append(l[0])
-                left_data.append(last_Rembered)
-        if save:
-            for i in range(len(right_data)):
-                self.saveRecord(phoneNumber, phoneNumber, right_data[i], left_data[i])
-        data = {"value": sum(left_data)}
-        logger.info(
-            f"\n{'-'*50}\nrequest:{json_obj}\nresponse:{data}\nSaved:{save}\n{'-'*50}"
-        )
-        return JsonResponse(data)
+        try:
+            decoded_str = request.body.decode("utf-8")
+            json_obj = json.loads(decoded_str)
+            message = json_obj.get("message", "")
+            save = json_obj.get("save", False)
+            phoneNumber = json_obj.get("phoneNumber", 0000000000)
+            test_strings = message.splitlines()
+            right_data = []
+            left_data = []
+            last_remembered_amount = 0
+            last_remembered_datetime = timezone.now()
+            last_remembered_name = "unknown"
+            for s in test_strings:
+                if (
+                    ("pm" in s or "am" in s or "AM" in s or "PM" in s)
+                    and "]" in s
+                    and "[" in s
+                    and ":" in s
+                ):
+                    list_data = s.split("]")
+                    last_remembered_name = list_data[1].split(":")[0].strip()
+                    list_data = s.split("[")
+                    list_data = list_data[1].split(",")
+                    time = list_data[1].split("]")[0].strip()
+                    day_month = list_data[0]
+                    combined = f"{day_month} {time}"
+                    last_remembered_datetime = datetime.strptime(
+                        combined, "%d/%m %I:%M %p"
+                    ).replace(year=2025)
+                    continue
+                l = self.extract_ints(s)
+                right_single_data = 0
+                left_single_data = 0
+                if len(l) > 1:
+                    last_remembered_amount = l[-1]
+                    for i in l[:-1]:
+                        right_data.append(i)
+                        right_single_data = i
+                        left_data.append(l[-1])
+                        left_single_data = l[-1]
+                if len(l) == 1:
+                    right_single_data = l[0]
+                    right_data.append(l[0])
+                    left_data.append(last_remembered_amount)
+                    left_single_data = last_remembered_amount
+                if last_remembered_name != "unknown":
+                    phoneNumber = last_remembered_name
+                if save or last_remembered_name != "unknown":
+                    self.saveRecord(
+                        last_remembered_datetime,
+                        phoneNumber,
+                        phoneNumber,
+                        right_single_data,
+                        left_single_data,
+                    )
+            data = {"value": sum(left_data)}
+            logger.info(
+                f"\n{'-'*50}\nrequest:{json_obj}\nresponse:{data}\nSaved:{save}\n{'-'*50}"
+            )
+            return JsonResponse(data)
+        except Exception as e:
+            logger.error(f"Error in CalculateView: {e}")
+            return JsonResponse({"error": str(e)}, status=500)
 
     def extract_ints(self, s: str) -> list[int]:
         nums = []
@@ -80,12 +118,15 @@ class CalculateView(View):
                 None,
             )  # Or raise an error, or return empty list, depending on desired behavior
 
-    def saveRecord(self, name="", phone="", matka_number=000, amount=000):
+    def saveRecord(
+        self, last_remembered_datetime, name="", phone="", matka_number=000, amount=000
+    ):
         new_contact = Contact(
             name=name,
             phone=phone,
             matka_number=matka_number,
             amount=amount,
+            created_at=last_remembered_datetime,  # Assuming you want to set this later or it will be auto-set
         )
         # Save it to the database
         new_contact.save()
