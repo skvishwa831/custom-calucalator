@@ -57,8 +57,7 @@ class CalculateView(View):
                     last_remembered_datetime = datetime.strptime(
                         combined, "%d/%m %I:%M %p"
                     ).replace(year=2025)
-                    if(data[1]):
-                        print('data found', data[1])
+                    if data[1]:
                         s = data[1]
                     else:
                         continue
@@ -87,7 +86,7 @@ class CalculateView(View):
                         right_single_data,
                         left_single_data,
                     )
-            data = {"value": sum(left_data)}
+            data = {"value": sum(left_data), "name": last_remembered_name}
             logger.info(
                 f"\n{'-'*50}\nrequest:{json_obj}\nresponse:{data}\nSaved:{save}\n{'-'*50}"
             )
@@ -147,6 +146,46 @@ class record_fetch(View):
         serializer = ContactSerializer(contacts, many=True)
         data = {"data": serializer.data}
         return JsonResponse(data)
+
+
+class fetch_saved_Names(View):
+    @csrf_exempt
+    def get(self, request, *args, **kwargs):
+        try:
+            unique_vals = (
+                Contact.objects.order_by().values_list("name", flat=True).distinct()
+            )
+            data = {"data": list(unique_vals)}
+            return JsonResponse(data)
+        except Exception as e:
+            logger.error(f"Error in fetch_saved_Names: {e}")
+            return JsonResponse({"error": str(e)}, status=500)
+
+
+class delete_records(View):
+    @csrf_exempt
+    def post(self, request, *args, **kwargs):
+        try:
+            decoded_str = request.body.decode("utf-8")
+            json_obj = json.loads(decoded_str)
+            name = json_obj.get("name", None)
+            pwd = json_obj.get("pwd", None)
+            if name:
+                if name == "all":
+                    if pwd != "delete":
+                        return JsonResponse({"error": "Invalid password"}, status=403)
+                    Contact.objects.all().delete()
+                    data = {"value": "success"}
+                    return JsonResponse(data)
+                # Delete the contact with the given name
+                Contact.objects.filter(name=name).delete()
+                data = {"value": "success"}
+                return JsonResponse(data)
+            else:
+                return JsonResponse({"error": "Name not provided"}, status=400)
+        except Exception as e:
+            logger.error(f"Error in delete: {e}")
+            return JsonResponse({"error": str(e)}, status=500)
 
 
 class shutDown(View):

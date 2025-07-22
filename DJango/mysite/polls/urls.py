@@ -9,4 +9,6 @@ urlpatterns = [
     path("calculate/", CalculateView.as_view(), name="calculate"),
     path("shutdown/", shutDown.as_view(), name="shutDown"),
     path("record/", record_fetch.as_view(), name="record"),
+    path("fetch_saved_names/", views.fetch_saved_Names.as_view(), name="fetch_saved_names"),
+    path("delete_records/", views.delete_records.as_view(), name="delete_records"),
 ]
