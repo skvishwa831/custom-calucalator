@@ -40,12 +40,7 @@ class CalculateView(View):
             last_remembered_datetime = timezone.now()
             last_remembered_name = "unknown"
             for s in test_strings:
-                if (
-                    ("pm" in s or "am" in s or "AM" in s or "PM" in s)
-                    and "]" in s
-                    and "[" in s
-                    and ":" in s
-                ):
+                if self.isNamingAndTimeTagged(s):
                     list_data = s.split("]")
                     last_remembered_name = list_data[1].split(":")[0].strip()
                     data = list_data[1].split(":")
@@ -79,13 +74,15 @@ class CalculateView(View):
                 if last_remembered_name != "unknown":
                     phoneNumber = last_remembered_name
                 if save or last_remembered_name != "unknown":
-                    self.saveRecord(
-                        last_remembered_datetime,
-                        phoneNumber,
-                        phoneNumber,
-                        right_single_data,
-                        left_single_data,
-                    )
+                    if right_single_data != 0 and left_single_data != 0:
+                        self.saveRecord(
+                            last_remembered_datetime,
+                            phoneNumber,
+                            phoneNumber,
+                            right_single_data,
+                            left_single_data,
+                        )
+
             data = {"value": sum(left_data), "name": last_remembered_name}
             logger.info(
                 f"\n{'-'*50}\nrequest:{json_obj}\nresponse:{data}\nSaved:{save}\n{'-'*50}"
@@ -134,6 +131,14 @@ class CalculateView(View):
         )
         # Save it to the database
         new_contact.save()
+
+    def isNamingAndTimeTagged(self, s: str) -> bool:
+        return (
+            ("pm" in s or "am" in s or "AM" in s or "PM" in s)
+            and "]" in s
+            and "[" in s
+            and ":" in s
+        )
 
 
 class record_fetch(View):
