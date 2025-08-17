@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta, time
 import os
 import re
 from django.shortcuts import render
@@ -12,9 +12,38 @@ from rest_framework.permissions import AllowAny
 from django.http import JsonResponse
 import json
 from polls.models import Contact
-from polls.serializers import ContactSerializer
+from polls.serializers import (
+    ContactSerializer,
+    CustomerNamesSerializer,
+    GameDashBoardSerializer,
+    GameRecordsSerializer,
+    GamesTypesSerializer,
+)
 from django.utils import timezone
-
+from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from .models import CustomerNames, GameDashBoard, GamesTypes, User
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.generics import ListAPIView
+from django.shortcuts import render, redirect
+from django.contrib.auth import get_user_model
+from django.contrib import messages
+from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.token_blacklist.models import (
+    OutstandingToken,
+    BlacklistedToken,
+)
+from django.contrib.auth import authenticate
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.token_blacklist.models import (
+    OutstandingToken,
+    BlacklistedToken,
+)
+from polls.authentication import CustomJWTAuthentication
+from datetime import date
 import logging
 
 logger = logging.getLogger(__name__)
@@ -24,8 +53,150 @@ def index(request):
     return render(request, "index.html")
 
 
-class CalculateView(View):
-    @csrf_exempt
+class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        refresh = self.get_token(self.user)
+
+        # Save the JTI of the new token
+        self.user.current_token_jti = str(refresh["jti"])
+        self.user.save(update_fields=["current_token_jti"])
+
+        data["refresh"] = str(refresh)
+        data["access"] = str(refresh.access_token)
+        return data
+
+
+class MyTokenObtainPairView(TokenObtainPairView):
+    serializer_class = MyTokenObtainPairSerializer
+
+
+class CustomerNamesListView(APIView):
+
+    authentication_classes = [CustomJWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            customer_names = CustomerNames.objects.all()
+            serializer = CustomerNamesSerializer(customer_names, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            logger.error(f"Error fetching customer names: {e}")
+            return Response({"error": "Failed to fetch customer names"}, status=500)
+
+
+class CustomLoginView(APIView):
+    authentication_classes = []  # Disable auth for this endpoint
+    permission_classes = []  # Allow anyone to access
+
+    def post(self, request):
+        try:
+            decoded_str = request.body.decode("utf-8")
+            json_obj = json.loads(decoded_str)
+            username = json_obj.get("username")
+            password = json_obj.get("password")
+
+            user = authenticate(email=username, password=password)
+
+            if user is None or not user.is_active:
+                return Response(
+                    {"error": "Invalid credentials"},
+                    status=status.HTTP_401_UNAUTHORIZED,
+                )
+
+            # Blacklist all previous refresh tokens
+            for token in OutstandingToken.objects.filter(user=user):
+                try:
+                    BlacklistedToken.objects.get_or_create(token=token)
+                except Exception:
+                    pass
+
+            # Create new tokens
+            refresh = RefreshToken.for_user(user)
+            access = refresh.access_token
+
+            # ✅ Store the new access token's jti
+            user.current_token_jti = access["jti"]
+            user.save()
+
+            return Response(
+                {
+                    "access": str(access),
+                    "refresh": str(refresh),
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        except Exception as e:
+            logger.error(f"Error in login view: {e}")
+            return Response({"error": "Failed to login"}, status=500)
+
+
+class GamesTypesListView(APIView):
+    authentication_classes = [CustomJWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            games = GamesTypes.objects.all()
+            serializer = GamesTypesSerializer(games, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            logger.error(f"Error fetching game types: {e}")
+            return Response({"error": "Failed to fetch game types"}, status=500)
+
+
+User = get_user_model()
+
+
+def register(request):
+    try:
+        if request.method == "POST":
+            decoded_str = request.body.decode("utf-8")
+            json_obj = json.loads(decoded_str)
+            email = json_obj.get("email")
+            name = json_obj.get("name")
+            password = json_obj.get("password")
+            confirm_password = json_obj.get("confirm_password")
+            secret_key = json_obj.get("scrate_kay")
+
+            if not secret_key:
+                return JsonResponse({"error": "Secret key is required."}, status=401)
+
+            if secret_key != "v9$TgL#2pQ@zX8!rWm7^bKfE1&uYdC6*oJ":
+                return JsonResponse({"error": "Invalid secret key."}, status=401)
+
+            if not email or not name or not password:
+                messages.error(request, "All fields are required.")
+                return JsonResponse({"error": "All fields are required."}, status=400)
+
+            if password != confirm_password:
+                messages.error(request, "Passwords do not match.")
+                return JsonResponse({"error": "Passwords do not match."}, status=400)
+
+            if User.objects.filter(email=email).exists():
+                messages.error(request, "Email already registered.")
+                return JsonResponse({"error": "Email already registered."}, status=400)
+
+            user = User(email=email, name=name)
+            user.set_password(password)  # 🔐 hashes the password
+            user.save()
+            return JsonResponse(
+                {"message": "User registered successfully."}, status=201
+            )
+        else:
+            messages.error(request, "Invalid request method.")
+            return JsonResponse({"error": "Invalid request method."}, status=400)
+    except Exception as e:
+        logger.error(f"Error in register view: {e}")
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+class CalculateView(APIView):  # ✅ Use APIView
+    authentication_classes = [CustomJWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
     def post(self, request, *args, **kwargs):
         try:
             decoded_str = request.body.decode("utf-8")
@@ -56,9 +227,11 @@ class CalculateView(View):
                         s = data[1]
                     else:
                         continue
+
                 l = self.extract_ints(s)
                 right_single_data = 0
                 left_single_data = 0
+
                 if len(l) > 1:
                     last_remembered_amount = l[-1]
                     for i in l[:-1]:
@@ -66,13 +239,16 @@ class CalculateView(View):
                         right_single_data = i
                         left_data.append(l[-1])
                         left_single_data = l[-1]
+
                 if len(l) == 1:
                     right_single_data = l[0]
                     right_data.append(l[0])
                     left_data.append(last_remembered_amount)
                     left_single_data = last_remembered_amount
+
                 if last_remembered_name != "unknown":
                     phoneNumber = last_remembered_name
+
                 if save or last_remembered_name != "unknown":
                     if right_single_data != 0 and left_single_data != 0:
                         self.saveRecord(
@@ -141,8 +317,170 @@ class CalculateView(View):
         )
 
 
+class SaveRecords(APIView):  # ✅ Use APIView
+    authentication_classes = [CustomJWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        try:
+            decoded_str = request.body.decode("utf-8")
+            json_obj = json.loads(decoded_str)
+            message = json_obj.get("message", "")
+            name = json_obj.get("name", "")
+            game_name = json_obj.get("gameName", "")
+            test_strings = message.splitlines()
+            right_data = []
+            left_data = []
+            last_remembered_amount = 0
+            last_remembered_datetime = timezone.now()
+            last_remembered_name = "unknown"
+            for s in test_strings:
+                if self.isNamingAndTimeTagged(s):
+                    list_data = s.split("]")
+                    last_remembered_name = list_data[1].split(":")[0].strip()
+                    data = list_data[1].split(":")
+                    list_data = s.split("[")
+                    list_data = list_data[1].split(",")
+                    time_local = list_data[1].split("]")[0].strip()
+                    day_month = list_data[0]
+                    combined = f"{day_month} {time_local}"
+                    last_remembered_datetime = datetime.strptime(
+                        combined, "%d/%m %I:%M %p"
+                    ).replace(year=2025)
+                    if data[1]:
+                        s = data[1]
+                    else:
+                        continue
+                l = self.extract_ints(s)
+                right_single_data = 0
+                left_single_data = 0
+
+                if len(l) > 1:
+                    last_remembered_amount = l[-1]
+                    for i in l[:-1]:
+                        right_data.append(i)
+                        right_single_data = i
+                        left_data.append(l[-1])
+                        left_single_data = l[-1]
+
+                if len(l) == 1:
+                    right_single_data = l[0]
+                    right_data.append(l[0])
+                    left_data.append(last_remembered_amount)
+                    left_single_data = last_remembered_amount
+
+                if last_remembered_name != "unknown":
+                    phoneNumber = last_remembered_name
+            gameRecordSerializer = GameRecordsSerializer(
+                data={
+                    "name": name,
+                    "gameName": game_name,
+                    "content": json.dumps(
+                        {"matka_number": right_data, "amount": left_data}
+                    ),
+                }
+            )
+            if gameRecordSerializer.is_valid(raise_exception=True):
+                gameRecordSerializer.save()
+
+            now = datetime.now()
+            cutoff_time = time(5, 0)  # This is the correct usage of the 'time' class
+
+            if now.time() < cutoff_time:
+                adjusted_date = (now - timedelta(days=1)).date()
+            else:
+                adjusted_date = now.date()
+
+            found_user = GameDashBoard.objects.filter(
+                name=name, date=adjusted_date
+            ).first()
+            if found_user:
+                found_user.totalAmount += sum(left_data)
+                found_user.save()
+            else:
+                GameDashBoard.objects.create(
+                    name=name, totalAmount=sum(left_data), date=adjusted_date
+                )
+            data = {"value": sum(left_data), "name": last_remembered_name}
+            logger.info(f"\n{'-'*50}\nrequest:{json_obj}\nresponse:{data}\n{'-'*50}")
+            return JsonResponse(data)
+        except Exception as e:
+            logger.error(f"Error in CalculateView: {e}")
+            return JsonResponse({"error": str(e)}, status=500)
+
+    def extract_ints(self, s: str) -> list[int]:
+        nums = []
+        current = ""
+        for ch in s:
+            if ch.isdigit():
+                current += ch
+            elif current:
+                nums.append(int(current))
+                current = ""
+        if current:
+            nums.append(int(current))
+        return nums
+
+    def read_two_number_groups(self, input_string):
+        pattern = r"(\d+)\D*(\d+)"
+        match = re.search(pattern, input_string)
+
+        if match:
+            num1 = match.group(1)
+            num2 = match.group(2)
+            return int(num1), int(num2)  # Convert to integers
+        else:
+            return (
+                None,
+                None,
+            )  # Or raise an error, or return empty list, depending on desired behavior
+
+    def saveRecord(
+        self, last_remembered_datetime, name="", phone="", matka_number=000, amount=000
+    ):
+        new_contact = Contact(
+            name=name,
+            phone=phone,
+            matka_number=matka_number,
+            amount=amount,
+            created_at=last_remembered_datetime,  # Assuming you want to set this later or it will be auto-set
+        )
+        # Save it to the database
+        new_contact.save()
+
+    def isNamingAndTimeTagged(self, s: str) -> bool:
+        return (
+            ("pm" in s or "am" in s or "AM" in s or "PM" in s)
+            and "]" in s
+            and "[" in s
+            and ":" in s
+        )
+
+
+class GameDashBoardView(View):
+    authentication_classes = [CustomJWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            now = datetime.now()
+            cutoff_time = time(5, 0)  # This is the correct usage of the 'time' class
+
+            if now.time() < cutoff_time:
+                adjusted_date = (now - timedelta(days=1)).date()
+            else:
+                adjusted_date = now.date()
+            unique_vals = GameDashBoard.objects.filter(date=adjusted_date).order_by()
+            return JsonResponse(GameDashBoardSerializer(unique_vals, many=True).data, safe=False)
+        except Exception as e:
+            logger.error(f"Error in GameDashBoardView: {e}")
+            return JsonResponse({"error": str(e)}, status=500)
+
+
 class record_fetch(View):
-    @csrf_exempt
+    authentication_classes = [CustomJWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
     def post(self, request, *args, **kwargs):
         decoded_str = request.body.decode("utf-8")
         json_obj = json.loads(decoded_str)
@@ -154,7 +492,9 @@ class record_fetch(View):
 
 
 class fetch_saved_Names(View):
-    @csrf_exempt
+    authentication_classes = [CustomJWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
     def get(self, request, *args, **kwargs):
         try:
             unique_vals = (
@@ -168,7 +508,9 @@ class fetch_saved_Names(View):
 
 
 class delete_records(View):
-    @csrf_exempt
+    authentication_classes = [CustomJWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
     def post(self, request, *args, **kwargs):
         try:
             decoded_str = request.body.decode("utf-8")
@@ -194,7 +536,9 @@ class delete_records(View):
 
 
 class shutDown(View):
-    @csrf_exempt
+    authentication_classes = [CustomJWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
     def post(self, request, *args, **kwargs):
         self.shutdown_pc(5)
         data = {"value": "success"}

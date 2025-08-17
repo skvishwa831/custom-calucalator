@@ -21,6 +21,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 LOG_DIR = BASE_DIR / "logs"
 LOG_DIR.mkdir(exist_ok=True)
+from datetime import timedelta
 
 LOG_LEVEL = os.getenv("DJANGO_LOG_LEVEL", "INFO")
 
@@ -89,6 +90,17 @@ DEBUG = False
 ALLOWED_HOSTS = ["192.168.31.216", "localhost"]
 
 
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=365 * 100),  # ~100 years
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=365 * 100),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}
+
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -101,11 +113,13 @@ INSTALLED_APPS = [
     "polls",
     "corsheaders",
     "rest_framework",
+    'rest_framework.authtoken',
+    'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist'
 ]
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
-    "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -113,6 +127,15 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+}
 
 ROOT_URLCONF = "mysite.urls"
 CORS_ALLOW_ALL_ORIGINS = True
@@ -132,6 +155,9 @@ CORS_ALLOW_HEADERS = [
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:4200",
 ]
+
+
+AUTH_USER_MODEL = 'polls.User'
 CSRF_COOKIE_SECURE = False  # Set to True if using HTTPS
 CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript to access the CSRF cookie
 SESSION_COOKIE_SECURE = False  # Set to True if using HTTPS

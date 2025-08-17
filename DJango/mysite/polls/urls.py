@@ -2,7 +2,9 @@ from django.urls import path
 
 from django.contrib import admin
 from . import views
-from .views import CalculateView, shutDown, record_fetch
+from .views import CalculateView, CustomerNamesListView, GamesTypesListView, MyTokenObtainPairView, shutDown, record_fetch, register, CustomLoginView, SaveRecords, GameDashBoardView
+from rest_framework_simplejwt.views import TokenRefreshView
+
 
 urlpatterns = [
     path("", views.index, name="index"),
@@ -11,4 +13,11 @@ urlpatterns = [
     path("record/", record_fetch.as_view(), name="record"),
     path("fetch_saved_names/", views.fetch_saved_Names.as_view(), name="fetch_saved_names"),
     path("delete_records/", views.delete_records.as_view(), name="delete_records"),
+    path('login/', CustomLoginView.as_view(), name='token_obtain_pair'),
+    path('refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('customer-names/', CustomerNamesListView.as_view(), name='customer-names-list'),
+    path('games/', GamesTypesListView.as_view(), name='games-list'),
+    path('register/', register, name='register'),
+    path('save-record/', SaveRecords.as_view(), name='save-record'),
+    path('game-dashboard/', GameDashBoardView.as_view(), name='game-dashboard'),
 ]
