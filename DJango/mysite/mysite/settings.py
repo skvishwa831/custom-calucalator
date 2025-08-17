@@ -87,17 +87,21 @@ SECRET_KEY = "django-insecure--i_^-zp84h3u0z_rg@ecd2-wh^tjpc#h5j5m3wsqs#gk4^!#hq
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ["192.168.31.216", "localhost"]
+ALLOWED_HOSTS = [
+    "192.168.31.216",
+    "localhost",
+    "skvishwa.pythonanywhere.com",
+]
 
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(days=365 * 100),  # ~100 years
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=365 * 100),
-    'ROTATE_REFRESH_TOKENS': True,
-    'BLACKLIST_AFTER_ROTATION': True,
-    'ALGORITHM': 'HS256',
-    'SIGNING_KEY': SECRET_KEY,
-    'AUTH_HEADER_TYPES': ('Bearer',),
+    "ACCESS_TOKEN_LIFETIME": timedelta(days=365 * 100),  # ~100 years
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=365 * 100),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "ALGORITHM": "HS256",
+    "SIGNING_KEY": SECRET_KEY,
+    "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
 
@@ -113,9 +117,9 @@ INSTALLED_APPS = [
     "polls",
     "corsheaders",
     "rest_framework",
-    'rest_framework.authtoken',
-    'rest_framework_simplejwt',
-    'rest_framework_simplejwt.token_blacklist'
+    "rest_framework.authtoken",
+    "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",
 ]
 
 MIDDLEWARE = [
@@ -129,11 +133,11 @@ MIDDLEWARE = [
 ]
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
     ],
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
     ],
 }
 
@@ -157,7 +161,7 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 
-AUTH_USER_MODEL = 'polls.User'
+AUTH_USER_MODEL = "polls.User"
 CSRF_COOKIE_SECURE = False  # Set to True if using HTTPS
 CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript to access the CSRF cookie
 SESSION_COOKIE_SECURE = False  # Set to True if using HTTPS
