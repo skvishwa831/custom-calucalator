@@ -2,7 +2,7 @@ from django.urls import path
 
 from django.contrib import admin
 from . import views
-from .views import CalculateView, CustomerNamesListView, GamesTypesListView, MyTokenObtainPairView, shutDown, record_fetch, register, CustomLoginView, SaveRecords, GameDashBoardView
+from .views import CalculateView, CustomerNamesListView, GamesTypesListView, MyTokenObtainPairView, shutDown, record_fetch, register, CustomLoginView, SaveRecords, GameDashBoardView, GameWinnnigNumbers
 from rest_framework_simplejwt.views import TokenRefreshView
 
 
@@ -20,4 +20,5 @@ urlpatterns = [
     path('register/', register, name='register'),
     path('save-record/', SaveRecords.as_view(), name='save-record'),
     path('game-dashboard/', GameDashBoardView.as_view(), name='game-dashboard'),
+    path('game-winning-numbers/', GameWinnnigNumbers.as_view(), name='game-winning-numbers'),
 ]

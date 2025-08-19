@@ -66,6 +66,7 @@ class GameRecords(models.Model):
     name = models.CharField(max_length=255)
     gameName = models.CharField(max_length=255)
     content = models.TextField()  # Suitable for large text
+    date = models.DateField()  # Accepts only date (no time)
 
     def __str__(self):
         return f"{self.name} - {self.gameName}"
@@ -77,3 +78,10 @@ class GameDashBoard(models.Model):
 
     def __str__(self):
         return f"{self.name} - {self.date}"
+
+class GameWinningNumbersRecord(models.Model):
+    date = models.DateField()
+    records = models.TextField()  # Stores large JSON string
+
+    def __str__(self):
+        return f"Winning Numbers on {self.date}"

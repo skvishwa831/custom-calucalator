@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Contact, CustomerNames, GameRecords, GamesTypes, GameDashBoard
+from .models import Contact, CustomerNames, GameRecords, GamesTypes, GameDashBoard, GameWinningNumbersRecord
 
 
 class ContactSerializer(serializers.ModelSerializer):
@@ -22,10 +22,15 @@ class GamesTypesSerializer(serializers.ModelSerializer):
 class GameRecordsSerializer(serializers.ModelSerializer):
     class Meta:
         model = GameRecords
-        fields = ['id', 'name', 'gameName', 'content']
+        fields = ['id', 'name', 'gameName', 'content', 'date']
 
 
 class GameDashBoardSerializer(serializers.ModelSerializer):
     class Meta:
         model = GameDashBoard
         fields = ['id', 'name', 'totalAmount', 'date']
+
+class GameWinningNumbersRecordSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GameWinningNumbersRecord
+        fields = ['id', 'date', 'records']

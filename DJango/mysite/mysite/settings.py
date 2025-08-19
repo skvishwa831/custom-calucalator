@@ -91,6 +91,7 @@ ALLOWED_HOSTS = [
     "192.168.31.216",
     "localhost",
     "skvishwa.pythonanywhere.com",
+    "192.168.31.244"
 ]
 TIME_ZONE = 'Asia/Kolkata'
 USE_TZ = True
