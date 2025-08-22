@@ -566,11 +566,8 @@ class GameDashBoardView(View):
                     for matka in all_data:
                         if games.get(matka.get("gameName", "")):
                             content = json.loads(matka.get("content", {}))
-                            for matk_number in content.get("matka_number", []):
+                            for index, matk_number in enumerate(content.get("matka_number", [])):
                                 if matk_number in games.get(matka.get("gameName", "")):
-                                    index = content.get("matka_number", []).index(
-                                        matk_number
-                                    )
                                     win_amount = content.get("amount", [])[index]
                                     grant_win_amount = self.get_win_amount(
                                         win_amount, matk_number
