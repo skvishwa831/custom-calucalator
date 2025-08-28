@@ -46,6 +46,7 @@ from rest_framework_simplejwt.token_blacklist.models import (
 from polls.authentication import CustomJWTAuthentication
 from datetime import date
 import logging
+from .dateutils import get_adjusted_date
 
 logger = logging.getLogger(__name__)
 
@@ -132,8 +133,6 @@ class CustomLoginView(APIView):
         except Exception as e:
             logger.error(f"Error in login view: {e}")
             return Response({"error": "Failed to login"}, status=500)
-
-
 class GamesTypesListView(APIView):
     authentication_classes = [CustomJWTAuthentication]
     permission_classes = [IsAuthenticated]
@@ -373,12 +372,7 @@ class SaveRecords(APIView):  # ✅ Use APIView
                 if last_remembered_name != "unknown":
                     phoneNumber = last_remembered_name
             # ------------------------
-            now = datetime.now()
-            cutoff_time = time(5, 0)  # This is the correct usage of the 'time' class
-            if now.time() < cutoff_time:
-                adjusted_date = (now - timedelta(days=1)).date()
-            else:
-                adjusted_date = now.date()
+            adjusted_date = get_adjusted_date()
             # ----------------------------
             gameRecordSerializer = GameRecordsSerializer(
                 data={
@@ -468,7 +462,7 @@ class GameWinnnigNumbers(View):
     permission_classes = [IsAuthenticated]
     def get(self, request, *args, **kwargs):
         try:
-            adjusted_date = self.getDate()
+            adjusted_date = get_adjusted_date()
             model_data = GameWinningNumbersRecord.objects.filter(date=adjusted_date).all()
             serializer = GameWinningNumbersRecordSerializer(model_data, many=True)
             if(len(serializer.data) == 0):
@@ -506,14 +500,14 @@ class GameWinnnigNumbers(View):
             # Handle POST request data here
             decoded_str = request.body.decode("utf-8")
             request_data = json.loads(decoded_str)
-            adjusted_date = self.getDate()
+            adjusted_date = get_adjusted_date()
             try:
                 found_record = GameWinningNumbersRecord.objects.filter(date=adjusted_date).first()
                 found_record.records = json.dumps(request_data)
                 found_record.save()
             except Exception as e:
                 is_valid_data = GameWinningNumbersRecordSerializer(data={
-                    "date": self.getDate(),
+                    "date": adjusted_date,
                     "records": json.dumps(request_data)
                 })
                 if is_valid_data.is_valid(raise_exception=True):
@@ -525,14 +519,6 @@ class GameWinnnigNumbers(View):
             logger.error(f"Error in GameWinningNumbers: {e}")
             return JsonResponse({"error": str(e)}, status=500)
 
-    def getDate(self):
-        now = datetime.now()
-        cutoff_time = time(5, 0)  # This is the correct usage of the 'time' class
-        if now.time() < cutoff_time:
-            adjusted_date = (now - timedelta(days=1)).date()
-        else:
-            adjusted_date = now.date()
-        return adjusted_date
 class GameDashBoardView(View):
     authentication_classes = [CustomJWTAuthentication]
     permission_classes = [IsAuthenticated]
@@ -540,7 +526,7 @@ class GameDashBoardView(View):
     def get(self, request, *args, **kwargs):
         try:
             games = {}
-            adjusted_date = self.getDate()
+            adjusted_date = get_adjusted_date()
             try:
                 found_record = GameWinningNumbersRecord.objects.filter(date=adjusted_date).first()
                 games = json.loads(found_record.records) if found_record else {}
@@ -618,16 +604,6 @@ class GameDashBoardView(View):
 
         # Fallback (shouldn't be reached)
         return amount
-
-    def getDate(self):
-        now = datetime.now()
-        cutoff_time = time(5, 0)  # This is the correct usage of the 'time' class
-        if now.time() < cutoff_time:
-            adjusted_date = (now - timedelta(days=1)).date()
-        else:
-            adjusted_date = now.date()
-        return adjusted_date
-
 
 class record_fetch(View):
     authentication_classes = [CustomJWTAuthentication]
