@@ -220,9 +220,9 @@ class CalculateView(APIView):  # ✅ Use APIView
                     time = list_data[1].split("]")[0].strip()
                     day_month = list_data[0]
                     combined = f"{day_month} {time}"
-                    last_remembered_datetime = datetime.strptime(
-                        combined, "%d/%m %I:%M %p"
-                    ).replace(year=2025)
+                    # last_remembered_datetime = datetime.strptime(
+                    #     combined, "%d/%m %I:%M %p"
+                    # ).replace(year=2025)
                     if data[1]:
                         s = data[1]
                     else:
@@ -251,13 +251,14 @@ class CalculateView(APIView):  # ✅ Use APIView
 
                 if save or last_remembered_name != "unknown":
                     if right_single_data != 0 and left_single_data != 0:
-                        self.saveRecord(
-                            last_remembered_datetime,
-                            phoneNumber,
-                            phoneNumber,
-                            right_single_data,
-                            left_single_data,
-                        )
+                        pass
+                        # self.saveRecord(
+                        #     last_remembered_datetime,
+                        #     phoneNumber,
+                        #     phoneNumber,
+                        #     right_single_data,
+                        #     left_single_data,
+                        # )
 
             data = {"value": sum(left_data), "name": last_remembered_name}
             logger.info(
