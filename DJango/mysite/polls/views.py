@@ -344,9 +344,6 @@ class SaveRecords(APIView):  # ✅ Use APIView
                     time_local = list_data[1].split("]")[0].strip()
                     day_month = list_data[0]
                     combined = f"{day_month} {time_local}"
-                    last_remembered_datetime = datetime.strptime(
-                        combined, "%d/%m %I:%M %p"
-                    ).replace(year=2025)
                     if data[1]:
                         s = data[1]
                     else:
