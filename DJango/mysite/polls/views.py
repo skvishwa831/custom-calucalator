@@ -1,6 +1,6 @@
-from datetime import datetime, timedelta, time
 import os
 import re
+from datetime import datetime, timedelta, time
 from django.shortcuts import render
 
 # Create your views here.
@@ -23,7 +23,14 @@ from polls.serializers import (
 from django.utils import timezone
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import CustomerNames, GameDashBoard, GameRecords, GameWinningNumbersRecord, GamesTypes, User
+from .models import (
+    CustomerNames,
+    GameDashBoard,
+    GameRecords,
+    GameWinningNumbersRecord,
+    GamesTypes,
+    User,
+)
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.generics import ListAPIView
 from django.shortcuts import render, redirect
@@ -379,7 +386,7 @@ class SaveRecords(APIView):  # ✅ Use APIView
                     "content": json.dumps(
                         {"matka_number": right_data, "amount": left_data}
                     ),
-                    "date": adjusted_date
+                    "date": adjusted_date,
                 }
             )
             if gameRecordSerializer.is_valid(raise_exception=True):
@@ -455,44 +462,48 @@ class SaveRecords(APIView):  # ✅ Use APIView
             and ":" in s
         )
 
+
 class GameWinnnigNumbers(View):
     authentication_classes = [CustomJWTAuthentication]
     permission_classes = [IsAuthenticated]
+
     def get(self, request, *args, **kwargs):
         try:
             adjusted_date = get_adjusted_date()
-            model_data = GameWinningNumbersRecord.objects.filter(date=adjusted_date).all()
+            model_data = GameWinningNumbersRecord.objects.filter(
+                date=adjusted_date
+            ).all()
             serializer = GameWinningNumbersRecordSerializer(model_data, many=True)
-            if(len(serializer.data) == 0):
+            if len(serializer.data) == 0:
                 schema_data = {
-                "Sridevi Open": ["0", "0", "0"],
-                "Sridevi Close": ["0", "0"],
-                "Time Bazar Open": ["0", "0", "0"],
-                "Time Bazar Close": ["0", "0"],
-                "Milan Day Open": ["0", "0", "0"],
-                "Milan Day Close": ["0", "0"],
-                "Rajadani Day Open": ["0", "0", "0"],
-                "Rajadani Day Close": ["0", "0"],
-                "Kalyan Open": ["0", "0", "0"],
-                "Kalyan Close": ["0", "0"],
-                "Sridevi Night Open": ["0", "0", "0"],
-                "Sridevi Night Close": ["0", "0"],
-                "Milan Night Open": ["0", "0", "0"],
-                "Milan Night Close": ["0", "0"],
-                "Rajadani Night Open": ["0", "0", "0"],
-                "Rajadani Night Close": ["0", "0"],
-                "Kalyan Night Open": ["0", "0", "0"],
-                "Kalyan Night Close": ["0", "0"],
-                "Main Bazar Open": ["0", "0", "0"],
-                "Main Bazar Close": ["0", "0"],
-            }
+                    "Sridevi Open": ["0", "0", "0"],
+                    "Sridevi Close": ["0", "0"],
+                    "Time Bazar Open": ["0", "0", "0"],
+                    "Time Bazar Close": ["0", "0"],
+                    "Milan Day Open": ["0", "0", "0"],
+                    "Milan Day Close": ["0", "0"],
+                    "Rajadani Day Open": ["0", "0", "0"],
+                    "Rajadani Day Close": ["0", "0"],
+                    "Kalyan Open": ["0", "0", "0"],
+                    "Kalyan Close": ["0", "0"],
+                    "Sridevi Night Open": ["0", "0", "0"],
+                    "Sridevi Night Close": ["0", "0"],
+                    "Milan Night Open": ["0", "0", "0"],
+                    "Milan Night Close": ["0", "0"],
+                    "Rajadani Night Open": ["0", "0", "0"],
+                    "Rajadani Night Close": ["0", "0"],
+                    "Kalyan Night Open": ["0", "0", "0"],
+                    "Kalyan Night Close": ["0", "0"],
+                    "Main Bazar Open": ["0", "0", "0"],
+                    "Main Bazar Close": ["0", "0"],
+                }
                 return JsonResponse(schema_data, safe=False)
             records = json.loads(serializer.data[0].get("records", "{}"))
             return JsonResponse(records, safe=False)
         except Exception as e:
             logger.error(f"Error in GameWinningNumbers: {e}")
             return JsonResponse({"error": str(e)}, status=500)
-        
+
     def post(self, request, *args, **kwargs):
         try:
             # Handle POST request data here
@@ -500,22 +511,24 @@ class GameWinnnigNumbers(View):
             request_data = json.loads(decoded_str)
             adjusted_date = get_adjusted_date()
             try:
-                found_record = GameWinningNumbersRecord.objects.filter(date=adjusted_date).first()
+                found_record = GameWinningNumbersRecord.objects.filter(
+                    date=adjusted_date
+                ).first()
                 found_record.records = json.dumps(request_data)
                 found_record.save()
             except Exception as e:
-                is_valid_data = GameWinningNumbersRecordSerializer(data={
-                    "date": adjusted_date,
-                    "records": json.dumps(request_data)
-                })
+                is_valid_data = GameWinningNumbersRecordSerializer(
+                    data={"date": adjusted_date, "records": json.dumps(request_data)}
+                )
                 if is_valid_data.is_valid(raise_exception=True):
                     is_valid_data.save()
             # Process the data and save it
             return JsonResponse({"message": "Data saved successfully"}, status=201)
-    
+
         except Exception as e:
             logger.error(f"Error in GameWinningNumbers: {e}")
             return JsonResponse({"error": str(e)}, status=500)
+
 
 class GameDashBoardView(View):
     authentication_classes = [CustomJWTAuthentication]
@@ -526,7 +539,9 @@ class GameDashBoardView(View):
             games = {}
             adjusted_date = get_adjusted_date()
             try:
-                found_record = GameWinningNumbersRecord.objects.filter(date=adjusted_date).first()
+                found_record = GameWinningNumbersRecord.objects.filter(
+                    date=adjusted_date
+                ).first()
                 games = json.loads(found_record.records) if found_record else {}
             except Exception as e:
                 logger.error(f"Error in GameDashBoardView: {e}")
@@ -545,12 +560,17 @@ class GameDashBoardView(View):
                 }
                 if user_name:
                     all_data = GameRecordsSerializer(
-                        GameRecords.objects.filter(name=user_name, date=adjusted_date).all(), many=True
+                        GameRecords.objects.filter(
+                            name=user_name, date=adjusted_date
+                        ).all(),
+                        many=True,
                     ).data
                     for matka in all_data:
                         if games.get(matka.get("gameName", "")):
                             content = json.loads(matka.get("content", {}))
-                            for index, matk_number in enumerate(content.get("matka_number", [])):
+                            for index, matk_number in enumerate(
+                                content.get("matka_number", [])
+                            ):
                                 if matk_number in games.get(matka.get("gameName", "")):
                                     win_amount = content.get("amount", [])[index]
                                     grant_win_amount = self.get_win_amount(
@@ -584,8 +604,6 @@ class GameDashBoardView(View):
 
         # Condition 2: Two digits
         if len(matka_str) == 2:
-            if matka_str[0] == matka_str[1]:  # Condition 4: Both digits same
-                return amount * 250
             return amount * 90  # Condition 2
 
         # Condition 3: Three digits
@@ -602,6 +620,7 @@ class GameDashBoardView(View):
 
         # Fallback (shouldn't be reached)
         return amount
+
 
 class record_fetch(View):
     authentication_classes = [CustomJWTAuthentication]
