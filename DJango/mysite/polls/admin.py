@@ -1,6 +1,15 @@
 from django.contrib import admin
 
-from .models import Contact, User, CustomerNames, GamesTypes, GameRecords, GameDashBoard, GameWinningNumbersRecord
+from .models import (
+    Contact,
+    User,
+    CustomerNames,
+    GamesTypes,
+    GameRecords,
+    GameDashBoard,
+    GameWinningNumbersRecord,
+    BakiJamaAmounts,
+)
 
 # Register your models here.
 
@@ -11,3 +20,4 @@ admin.site.register(CustomerNames)
 admin.site.register(GameRecords)
 admin.site.register(GameDashBoard)
 admin.site.register(GameWinningNumbersRecord)
+admin.site.register(BakiJamaAmounts)

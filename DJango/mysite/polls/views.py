@@ -19,6 +19,7 @@ from polls.serializers import (
     GameRecordsSerializer,
     GameWinningNumbersRecordSerializer,
     GamesTypesSerializer,
+    BakiJamaAmountsSerializer,
 )
 from django.utils import timezone
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -30,6 +31,7 @@ from .models import (
     GameWinningNumbersRecord,
     GamesTypes,
     User,
+    BakiJamaAmounts,
 )
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.generics import ListAPIView
@@ -140,6 +142,8 @@ class CustomLoginView(APIView):
         except Exception as e:
             logger.error(f"Error in login view: {e}")
             return Response({"error": "Failed to login"}, status=500)
+
+
 class GamesTypesListView(APIView):
     authentication_classes = [CustomJWTAuthentication]
     permission_classes = [IsAuthenticated]
@@ -550,6 +554,18 @@ class GameDashBoardView(View):
             final_data = []
             for item in jsonData:
                 user_name = item.get("name", "")
+                jama_ser = BakiJamaAmounts.objects.filter(
+                    name=user_name, date=adjusted_date, type="jama"
+                ).all()
+                jama_data = BakiJamaAmountsSerializer(jama_ser, many=True).data
+                jam_amount = sum([int(i.get("amount", 0)) for i in jama_data])
+                print(f"name {user_name} jama_amount {jam_amount}")
+                baki_ser = BakiJamaAmounts.objects.filter(
+                    name=user_name, date=adjusted_date, type="baki"
+                ).all()
+                baki_data = BakiJamaAmountsSerializer(baki_ser, many=True).data
+                baki_amount = sum([int(i.get("amount", 0)) for i in baki_data])
+                print(f"name {user_name} baki_amount {baki_amount}")
                 final_ob = {
                     "id": item.get("id", ""),
                     "name": user_name,
@@ -557,6 +573,12 @@ class GameDashBoardView(View):
                     "date": item.get("date", ""),
                     "win": [],
                     "winAmount": 0,
+                    "phonePe": self.calculate_signed_difference(
+                        jam_amount, baki_amount, False
+                    ),
+                    "PhonePeDisplay": self.calculate_signed_difference(
+                        jam_amount, baki_amount, True
+                    ),
                 }
                 if user_name:
                     all_data = GameRecordsSerializer(
@@ -589,6 +611,25 @@ class GameDashBoardView(View):
         except Exception as e:
             logger.error(f"Error in GameDashBoardView: {e}")
             return JsonResponse({"error": str(e)}, status=500)
+
+    def calculate_signed_difference(
+        self, jam_amount: float, baki_amount: float, with_symbol: bool
+    ) -> str:
+        """
+        Calculates the difference between jam_amount and baki_amount.
+
+        If with_symbol is True:
+            Returns a string with ₹ symbol and +/− sign.
+        If with_symbol is False:
+            Returns a plain float value.
+        """
+        result = jam_amount - baki_amount
+
+        if with_symbol:
+            sign = "+" if result >= 0 else "-"
+            return f"₹{sign}{abs(result):.2f}"
+        else:
+            return round(result, 2)
 
     def get_win_amount(self, amount, matka):
         matka_str = str(matka)
@@ -696,3 +737,75 @@ class shutDown(View):
             os.system(f"sudo shutdown -h +{delay_seconds // 60}")
         else:
             print("Unsupported operating system for direct shutdown command.")
+
+
+class BakiJamaAmountsView(APIView):
+    authentication_classes = [CustomJWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            decoded_str = request.body.decode("utf-8")
+            json_obj = json.loads(decoded_str)
+            name = json_obj.get("name", None)
+            type = json_obj.get("type", None)
+            amount = json_obj.get("amount", None)
+            if name is None or type is None or amount is None:
+                return Response(
+                    {"error": "name, type, and amount are required fields."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            request_date = {
+                "name": name,
+                "type": type,
+                "amount": amount,
+                "date": get_adjusted_date(),
+            }
+            print("json_obj", json_obj)
+            serializer = BakiJamaAmountsSerializer(data=request_date)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(f"Error in BakiJamaAmountsView POST: {e}")
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class GetJamaBakiRecords(APIView):
+    authentication_classes = [CustomJWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            decoded_str = request.body.decode("utf-8")
+            json_obj = json.loads(decoded_str)
+            name = json_obj.get("name", None)
+            if name is None:
+                return Response(
+                    {"error": "name, type, and amount are required fields."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            adjusted_date = get_adjusted_date()
+            jama_ser = BakiJamaAmounts.objects.filter(
+                name=name, date=adjusted_date, type="jama"
+            ).all()
+            jama_data = BakiJamaAmountsSerializer(jama_ser, many=True).data
+            jam_amount = sum([int(i.get("amount", 0)) for i in jama_data])
+            baki_ser = BakiJamaAmounts.objects.filter(
+                name=name, date=adjusted_date, type="baki"
+            ).all()
+            baki_data = BakiJamaAmountsSerializer(baki_ser, many=True).data
+            baki_amount = sum([int(i.get("amount", 0)) for i in baki_data])
+            data = {
+                "jama": jam_amount,
+                "baki" : baki_amount
+            }
+            return JsonResponse(data, safe=False)
+        except Exception as e:
+            logger.error(f"Error in BakiJamaAmountsView POST: {e}")
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

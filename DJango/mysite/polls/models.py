@@ -1,8 +1,14 @@
 from django.utils import timezone
 from django.db import models
+
 # accounts/models.py
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.contrib.auth.models import (
+    AbstractBaseUser,
+    BaseUserManager,
+    PermissionsMixin,
+)
 from django.db import models
+
 
 class Contact(models.Model):
     name = models.CharField(max_length=100)
@@ -13,7 +19,6 @@ class Contact(models.Model):
 
     def __str__(self):
         return self.name
-
 
 
 class UserManager(BaseUserManager):
@@ -31,13 +36,13 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault("is_superuser", True)
         return self.create_user(email, password, **extra_fields)
 
+
 class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
     name = models.CharField(max_length=255)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     current_token_jti = models.CharField(max_length=255, blank=True, null=True)
-
 
     objects = UserManager()
 
@@ -46,21 +51,24 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
-    
-    
+
+
 class CustomerNames(models.Model):
     name = models.CharField(max_length=255, unique=True)
 
     def __str__(self):
         return self.name
-    
+
+
 from django.db import models
+
 
 class GamesTypes(models.Model):
     gameName = models.CharField(max_length=100, unique=True)
 
     def __str__(self):
         return self.gameName
+
 
 class GameRecords(models.Model):
     name = models.CharField(max_length=255)
@@ -71,6 +79,7 @@ class GameRecords(models.Model):
     def __str__(self):
         return f"{self.name} - {self.gameName}"
 
+
 class GameDashBoard(models.Model):
     name = models.CharField(max_length=255)
     totalAmount = models.FloatField()
@@ -79,9 +88,19 @@ class GameDashBoard(models.Model):
     def __str__(self):
         return f"{self.name} - {self.date}"
 
+
 class GameWinningNumbersRecord(models.Model):
     date = models.DateField()
     records = models.TextField()  # Stores large JSON string
 
     def __str__(self):
         return f"Winning Numbers on {self.date}"
+
+class BakiJamaAmounts(models.Model):
+    name = models.CharField(max_length=100)
+    type = models.CharField(max_length=50)
+    amount = models.FloatField()
+    date = models.DateField()
+
+    def __str__(self):
+        return f"{self.name} - {self.type} - ₹{self.amount}"
